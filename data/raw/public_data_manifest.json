@@ -1,0 +1,32 @@
+{
+  "access_date": "2026-06-04",
+  "sources": [
+    {
+      "source_id": "mrt_station_entries",
+      "title": "Taipei MRT station entries and exits time series",
+      "dataset_page": "https://data.gov.tw/dataset/133184",
+      "download_url": "https://tsis.dbas.gov.taipei/statis/webMain.aspx?sys=220&funid=a05023601&cycle=4&outmode=12&compmode=0&outkind=3&deflst=2&nzo=1&type=0&ymf=8500&ymt=11400&kind=21",
+      "raw_path": "data/raw/mrt_station_entries.csv",
+      "agency": "Taipei City Government Department of Budget, Accounting and Statistics",
+      "license": "Open Government Data License, version 1.0"
+    },
+    {
+      "source_id": "mrt_entrances",
+      "title": "Coordinates of Taipei MRT station entrances and exits",
+      "dataset_page": "https://data.gov.tw/en/datasets/128428",
+      "download_url": "https://scidm.nchc.org.tw/en/dataset/best_wish128428/resource/60296981-c2e4-4766-a1e8-4ec8b4448af6/nchcproxy",
+      "raw_path": "data/raw/mrt_entrances.csv",
+      "agency": "Taipei Rapid Transit Corporation",
+      "license": "Open Government Data License, version 1.0"
+    },
+    {
+      "source_id": "population_by_village",
+      "title": "Village household and single-age population, 2026-04",
+      "dataset_page": "https://data.gov.tw/dataset/77132",
+      "download_url": "https://opdadm.moi.gov.tw/api/v1/no-auth/resource/api/dataset/2C7688CB-B505-4D00-B11C-66C4D31B024F/resource/44EDEF1F-EBDC-4CF0-9C6D-E845875CECF1/download",
+      "raw_path": "data/raw/population_by_village.csv",
+      "agency": "Department of Household Registration, Ministry of the Interior",
+      "license": "Open Government Data License, version 1.0"
+    }
+  ]
+}

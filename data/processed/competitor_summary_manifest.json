@@ -1,0 +1,15 @@
+{
+  "access_date": "2026-06-04",
+  "collection_mode": "streamed_source_csv_to_district_summary",
+  "sources": [
+    {
+      "source_id": "restaurant_businesses",
+      "title": "Business registrations by business item: restaurants",
+      "dataset_page": "https://data.gov.tw/dataset/108355",
+      "download_url": "https://data.gcis.nat.gov.tw/od/file?oid=D6F37400-1426-4C06-B330-2E344F3F73AB",
+      "derived_path": "data/processed/competitor_counts_by_district.csv",
+      "agency": "Administration of Commerce, Ministry of Economic Affairs",
+      "license": "Open Government Data License, version 1.0"
+    }
+  ]
+}

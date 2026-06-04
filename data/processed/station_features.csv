@@ -1,0 +1,7 @@
+station_name,monthly_entries_exits,target_population,competitor_count,real_estate_cost_index,transport_access_index
+台北車站,9132591.33,39767,411,95.0,0.89
+中山,3149548.5,61311,964,88.0,0.67
+公館,1626029.75,39767,411,76.0,0.44
+古亭,1834262.83,39767,411,68.0,1.0
+科技大樓,814987.0,74003,742,63.0,0.11
+劍潭,1618248.83,75633,365,58.0,0.33

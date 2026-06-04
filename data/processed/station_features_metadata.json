@@ -1,0 +1,9 @@
+{
+  "scope": "Six Taipei MRT-adjacent demo trade areas",
+  "latest_mrt_period_rule": "Use the largest numeric ROC year in data/raw/mrt_station_entries.csv",
+  "target_population_definition": "Residents aged 20-44 in the configured station district",
+  "competitor_count_definition": "Active restaurant business registrations in the configured station district",
+  "real_estate_cost_index_definition": "District-level proxy index documented in StationConfig",
+  "transport_access_index_definition": "Station entrance count normalized within demo stations",
+  "output": "data/processed/station_features.csv"
+}

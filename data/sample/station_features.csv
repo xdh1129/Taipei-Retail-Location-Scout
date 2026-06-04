@@ -1,0 +1,7 @@
+station_name,monthly_entries_exits,target_population,competitor_count,real_estate_cost_index,transport_access_index
+Taipei Main Station,5200000,36000,140,95,1.00
+Zhongshan,2100000,28000,82,88,0.95
+Gongguan,1800000,42000,70,76,0.86
+Guting,1250000,39000,42,68,0.82
+Technology Building,920000,31000,25,63,0.74
+Jiantan,1500000,26000,38,58,0.80
