@@ -54,11 +54,20 @@ def write_scores(path: Path, rows: list[dict[str, object]]) -> None:
         "competitor_count",
         "real_estate_cost_index",
         "transport_access_index",
+        "accessible_demand",
+        "competition_adjusted_customers",
+        "estimated_monthly_revenue",
+        "estimated_gross_profit",
+        "operating_cost_proxy",
+        "feasibility_ratio",
+        "economic_opportunity_index",
+        "profit_gap_proxy",
+        "break_even_capture_rate",
         "location_score",
         "recommendation_reason",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 

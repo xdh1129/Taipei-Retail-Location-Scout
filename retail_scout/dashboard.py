@@ -7,7 +7,14 @@ import pandas as pd
 
 DISPLAY_COLUMNS = [
     "station_name",
-    "location_score",
+    "economic_opportunity_index",
+    "feasibility_ratio",
+    "break_even_capture_rate",
+    "accessible_demand",
+    "competition_adjusted_customers",
+    "estimated_monthly_revenue",
+    "estimated_gross_profit",
+    "operating_cost_proxy",
     "monthly_entries_exits",
     "target_population",
     "competitor_count",
@@ -30,13 +37,16 @@ def build_summary(df: pd.DataFrame) -> dict[str, object]:
     top = ranked.iloc[0]
     lowest_competition = df.sort_values("competitor_count", ascending=True).iloc[0]
 
-    return {
+    summary = {
         "top_station": top["station_name"],
         "top_score": float(top["location_score"]),
         "average_monthly_entries_exits": float(df["monthly_entries_exits"].mean()),
         "lowest_competition_station": lowest_competition["station_name"],
         "lowest_competition_count": float(lowest_competition["competitor_count"]),
     }
+    if "feasibility_ratio" in df.columns:
+        summary["top_feasibility_ratio"] = float(top["feasibility_ratio"])
+    return summary
 
 
 def filter_ranked_locations(df: pd.DataFrame, minimum_score: float) -> pd.DataFrame:

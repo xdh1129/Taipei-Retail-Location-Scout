@@ -101,15 +101,37 @@ Detailed source notes are in `docs/data_sources.md`.
 
 ## Scoring Method
 
-The scoring pipeline computes a transparent `Location Score`:
+The scoring pipeline uses a transparent risk-adjusted economic opportunity model.
+Instead of assuming that high foot traffic always wins, the model estimates how close
+each trade area is to covering its demand, competition, and cost pressures.
 
 ```text
-Location Score =
-0.30 * normalized foot traffic
-+ 0.25 * normalized target population
-+ 0.20 * normalized demand-to-competition gap
-+ 0.15 * normalized cost affordability
-+ 0.10 * normalized transport access
+Accessible Demand =
+(monthly foot traffic * 0.00065 + target population * 0.28)
+* (0.85 + 0.30 * transport access index)
+
+Competition-Adjusted Customers =
+Accessible Demand / (1 + competitor count / 300) ^ 1.15
+
+Estimated Monthly Revenue =
+Competition-Adjusted Customers * 160
+
+Estimated Gross Profit =
+Estimated Monthly Revenue * 0.62
+
+Operating Cost Proxy =
+360,000 + real estate cost index * 4,500
+
+Feasibility Ratio =
+Estimated Gross Profit / Operating Cost Proxy
+
+Profit Gap Proxy =
+Estimated Gross Profit - Operating Cost Proxy
+
+Economic Opportunity Index =
+min(Feasibility Ratio, 1.0) * 100
+
+Location Score = Economic Opportunity Index
 ```
 
 Feature definitions:
@@ -119,6 +141,8 @@ Feature definitions:
 - `competitor_count`: active restaurant business registrations in the configured station district.
 - `real_estate_cost_index`: district-level cost proxy.
 - `transport_access_index`: station entrance count normalized within demo stations.
+- `feasibility_ratio`: estimated gross profit divided by operating cost proxy.
+- `break_even_capture_rate`: required monthly customers divided by accessible demand.
 
 Current score output:
 
@@ -126,7 +150,7 @@ Current score output:
 data/processed/station_scores.csv
 ```
 
-At the time of the current processed run, the top-ranked trade area is `劍潭`, mainly because it combines a large target population, lower restaurant competition, and a relatively affordable cost proxy.
+At the time of the current processed run, the top-ranked trade area is `劍潭`, with a feasibility ratio above 1.0. `台北車站` remains a strong but more expensive opportunity: its high foot traffic keeps the index high, while cost and competition pressure keep it below the top-ranked area.
 
 ## Dashboard
 
@@ -135,6 +159,7 @@ The Streamlit dashboard reads `data/processed/station_scores.csv` when available
 Dashboard features:
 
 - Top-station KPI cards.
+- Economic opportunity, feasibility ratio, and break-even capture metrics.
 - Minimum-score filter.
 - Ranked trade-area table.
 - Indicator chart.

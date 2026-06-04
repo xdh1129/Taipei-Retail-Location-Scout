@@ -40,6 +40,83 @@ class ScoringTests(unittest.TestCase):
         self.assertGreater(scored[0]["location_score"], scored[1]["location_score"])
         self.assertIn("strong demand-to-competition gap", scored[0]["recommendation_reason"])
 
+    def test_compute_location_scores_outputs_economic_opportunity_metrics(self):
+        rows = [
+            {
+                "station_name": "A",
+                "monthly_entries_exits": 1_000_000,
+                "target_population": 30_000,
+                "competitor_count": 300,
+                "real_estate_cost_index": 80,
+                "transport_access_index": 0.7,
+            },
+            {
+                "station_name": "B",
+                "monthly_entries_exits": 600_000,
+                "target_population": 60_000,
+                "competitor_count": 80,
+                "real_estate_cost_index": 55,
+                "transport_access_index": 0.6,
+            },
+        ]
+
+        scored = compute_location_scores(rows)
+        top = scored[0]
+
+        for field in [
+            "accessible_demand",
+            "competition_adjusted_customers",
+            "estimated_monthly_revenue",
+            "estimated_gross_profit",
+            "operating_cost_proxy",
+            "feasibility_ratio",
+            "economic_opportunity_index",
+            "profit_gap_proxy",
+            "break_even_capture_rate",
+        ]:
+            self.assertIn(field, top)
+
+        self.assertGreater(top["accessible_demand"], 0)
+        self.assertGreater(top["competition_adjusted_customers"], 0)
+        self.assertGreater(top["estimated_monthly_revenue"], 0)
+        self.assertGreater(top["estimated_gross_profit"], 0)
+        self.assertGreater(top["operating_cost_proxy"], 0)
+        self.assertGreater(top["feasibility_ratio"], 0)
+        self.assertGreaterEqual(top["economic_opportunity_index"], 0)
+        self.assertLessEqual(top["economic_opportunity_index"], 100)
+        self.assertEqual(top["location_score"], top["economic_opportunity_index"])
+        self.assertGreater(top["break_even_capture_rate"], 0)
+
+    def test_feasibility_model_penalizes_cost_and_competition_pressure(self):
+        rows = [
+            {
+                "station_name": "High Footfall Expensive Area",
+                "monthly_entries_exits": 1_200_000,
+                "target_population": 20_000,
+                "competitor_count": 600,
+                "real_estate_cost_index": 100,
+                "transport_access_index": 1.0,
+            },
+            {
+                "station_name": "Balanced Opportunity Area",
+                "monthly_entries_exits": 700_000,
+                "target_population": 65_000,
+                "competitor_count": 80,
+                "real_estate_cost_index": 55,
+                "transport_access_index": 0.7,
+            },
+        ]
+
+        scored = compute_location_scores(rows)
+
+        self.assertEqual(scored[0]["station_name"], "Balanced Opportunity Area")
+        self.assertGreater(scored[0]["feasibility_ratio"], scored[1]["feasibility_ratio"])
+        self.assertEqual(scored[0]["location_score"], 100.0)
+        self.assertIn(
+            "clears cost proxy under current assumptions",
+            scored[0]["recommendation_reason"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

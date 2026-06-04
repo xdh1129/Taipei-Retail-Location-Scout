@@ -1,7 +1,7 @@
-station_name,monthly_entries_exits,target_population,competitor_count,real_estate_cost_index,transport_access_index,location_score,recommendation_reason
-劍潭,1618248.83,75633.0,365.0,58.0,0.33,65.37,strong demand-to-competition gap; large target customer base; relatively affordable cost proxy
-台北車站,9132591.33,39767.0,411.0,95.0,0.89,43.37,high transit footfall
-科技大樓,814987.0,74003.0,742.0,63.0,0.11,41.88,large target customer base; relatively affordable cost proxy
-中山,3149548.5,61311.0,964.0,88.0,0.67,32.57,balanced but not dominant across current indicators
-古亭,1834262.83,39767.0,411.0,68.0,1.0,29.23,relatively affordable cost proxy
-公館,1626029.75,39767.0,411.0,76.0,0.44,18.95,balanced but not dominant across current indicators
+station_name,monthly_entries_exits,target_population,competitor_count,real_estate_cost_index,transport_access_index,accessible_demand,competition_adjusted_customers,estimated_monthly_revenue,estimated_gross_profit,operating_cost_proxy,feasibility_ratio,economic_opportunity_index,profit_gap_proxy,break_even_capture_rate,location_score,recommendation_reason
+劍潭,1618248.83,75633.0,365.0,58.0,0.33,21095.42,8445.64,1351302.75,837807.7,621000.0,1.3491,100.0,216807.7,0.2968,100.0,clears cost proxy under current assumptions; low break-even capture requirement; large accessible demand base
+台北車站,9132591.33,39767.0,411.0,95.0,0.89,19068.24,7068.87,1131019.53,701232.11,787500.0,0.8905,89.05,-86267.89,0.4163,89.05,near break-even under conservative assumptions; large accessible demand base
+古亭,1834262.83,39767.0,411.0,68.0,1.0,14176.09,5255.28,840844.54,521323.61,666000.0,0.7828,78.28,-144676.39,0.4736,78.28,moderate feasibility with execution sensitivity
+科技大樓,814987.0,74003.0,742.0,63.0,0.11,18764.26,4482.01,717122.04,444615.67,643500.0,0.6909,69.09,-198884.33,0.3457,69.09,moderate feasibility with execution sensitivity; low break-even capture requirement; large accessible demand base
+公館,1626029.75,39767.0,411.0,76.0,0.44,11972.23,4438.28,710124.35,440277.1,702000.0,0.6272,62.72,-261722.9,0.5911,62.72,"needs stronger capture, ticket size, or rent assumptions"
+中山,3149548.5,61311.0,964.0,88.0,0.67,20194.22,3862.85,618055.21,383194.23,756000.0,0.5069,50.69,-372805.77,0.3774,50.69,large accessible demand base

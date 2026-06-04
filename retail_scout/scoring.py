@@ -1,15 +1,26 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Iterable
 
 
-DEFAULT_WEIGHTS = {
-    "traffic": 0.30,
-    "target_population": 0.25,
-    "competition_gap": 0.20,
-    "cost_affordability": 0.15,
-    "transport_access": 0.10,
-}
+@dataclass(frozen=True)
+class EconomicAssumptions:
+    """Transparent assumptions for the retail economic-opportunity proxy."""
+
+    traffic_capture_rate: float = 0.00065
+    local_monthly_visit_rate: float = 0.28
+    access_base_multiplier: float = 0.85
+    access_lift_multiplier: float = 0.30
+    competitor_scale: float = 300.0
+    competition_elasticity: float = 1.15
+    average_ticket_size: float = 160.0
+    gross_margin: float = 0.62
+    base_monthly_operating_cost: float = 360_000.0
+    rent_index_cost_multiplier: float = 4_500.0
+
+
+DEFAULT_ASSUMPTIONS = EconomicAssumptions()
 
 
 def normalize_values(values: Iterable[float]) -> list[float]:
@@ -29,58 +40,106 @@ def compute_location_scores(rows: list[dict[str, object]]) -> list[dict[str, obj
     if not rows:
         return []
 
-    traffic = normalize_values(row["monthly_entries_exits"] for row in rows)
-    population = normalize_values(row["target_population"] for row in rows)
-    competition_gap = normalize_values(
-        float(row["target_population"]) / (float(row["competitor_count"]) + 1.0)
-        for row in rows
-    )
-    cost_pressure = normalize_values(row["real_estate_cost_index"] for row in rows)
-    cost_affordability = [1.0 - value for value in cost_pressure]
-    access = normalize_values(row["transport_access_index"] for row in rows)
+    estimates = [estimate_profit_opportunity(row) for row in rows]
 
     scored_rows: list[dict[str, object]] = []
     for index, row in enumerate(rows):
-        score = (
-            DEFAULT_WEIGHTS["traffic"] * traffic[index]
-            + DEFAULT_WEIGHTS["target_population"] * population[index]
-            + DEFAULT_WEIGHTS["competition_gap"] * competition_gap[index]
-            + DEFAULT_WEIGHTS["cost_affordability"] * cost_affordability[index]
-            + DEFAULT_WEIGHTS["transport_access"] * access[index]
-        )
-
         enriched = dict(row)
-        enriched["location_score"] = round(score * 100, 2)
+        enriched.update(estimates[index])
+        enriched["location_score"] = estimates[index]["economic_opportunity_index"]
         enriched["recommendation_reason"] = build_recommendation_reason(
-            traffic=traffic[index],
-            population=population[index],
-            competition_gap=competition_gap[index],
-            cost_affordability=cost_affordability[index],
+            accessible_demand=estimates[index]["accessible_demand"],
+            competition_adjusted_customers=estimates[index][
+                "competition_adjusted_customers"
+            ],
+            feasibility_ratio=estimates[index]["feasibility_ratio"],
+            break_even_capture_rate=estimates[index]["break_even_capture_rate"],
         )
         scored_rows.append(enriched)
 
-    return sorted(scored_rows, key=lambda item: item["location_score"], reverse=True)
+    return sorted(
+        scored_rows,
+        key=lambda item: (item["location_score"], item["feasibility_ratio"]),
+        reverse=True,
+    )
+
+
+def estimate_profit_opportunity(
+    row: dict[str, object],
+    assumptions: EconomicAssumptions = DEFAULT_ASSUMPTIONS,
+) -> dict[str, float]:
+    monthly_entries_exits = float(row["monthly_entries_exits"])
+    target_population = float(row["target_population"])
+    competitor_count = float(row["competitor_count"])
+    cost_index = float(row["real_estate_cost_index"])
+    access_index = float(row["transport_access_index"])
+
+    transit_demand = monthly_entries_exits * assumptions.traffic_capture_rate
+    local_demand = target_population * assumptions.local_monthly_visit_rate
+    access_multiplier = (
+        assumptions.access_base_multiplier
+        + assumptions.access_lift_multiplier * access_index
+    )
+    accessible_demand = (transit_demand + local_demand) * access_multiplier
+
+    competition_pressure = (
+        1.0 + competitor_count / assumptions.competitor_scale
+    ) ** assumptions.competition_elasticity
+    competition_adjusted_customers = accessible_demand / competition_pressure
+
+    estimated_monthly_revenue = (
+        competition_adjusted_customers * assumptions.average_ticket_size
+    )
+    estimated_gross_profit = estimated_monthly_revenue * assumptions.gross_margin
+    operating_cost_proxy = (
+        assumptions.base_monthly_operating_cost
+        + cost_index * assumptions.rent_index_cost_multiplier
+    )
+    feasibility_ratio = estimated_gross_profit / max(operating_cost_proxy, 1.0)
+    economic_opportunity_index = min(feasibility_ratio, 1.0) * 100.0
+    profit_gap_proxy = estimated_gross_profit - operating_cost_proxy
+    required_customers = operating_cost_proxy / (
+        assumptions.average_ticket_size * assumptions.gross_margin
+    )
+    break_even_capture_rate = required_customers / max(accessible_demand, 1.0)
+
+    return {
+        "accessible_demand": round(accessible_demand, 2),
+        "competition_adjusted_customers": round(competition_adjusted_customers, 2),
+        "estimated_monthly_revenue": round(estimated_monthly_revenue, 2),
+        "estimated_gross_profit": round(estimated_gross_profit, 2),
+        "operating_cost_proxy": round(operating_cost_proxy, 2),
+        "feasibility_ratio": round(feasibility_ratio, 4),
+        "economic_opportunity_index": round(economic_opportunity_index, 2),
+        "profit_gap_proxy": round(profit_gap_proxy, 2),
+        "break_even_capture_rate": round(break_even_capture_rate, 4),
+    }
 
 
 def build_recommendation_reason(
     *,
-    traffic: float,
-    population: float,
-    competition_gap: float,
-    cost_affordability: float,
+    accessible_demand: float,
+    competition_adjusted_customers: float,
+    feasibility_ratio: float,
+    break_even_capture_rate: float,
 ) -> str:
     reasons: list[str] = []
+    competition_retention = competition_adjusted_customers / max(accessible_demand, 1.0)
 
-    if competition_gap >= 0.70:
+    if feasibility_ratio >= 1.0:
+        reasons.append("clears cost proxy under current assumptions")
+    elif feasibility_ratio >= 0.85:
+        reasons.append("near break-even under conservative assumptions")
+    elif feasibility_ratio >= 0.65:
+        reasons.append("moderate feasibility with execution sensitivity")
+    if break_even_capture_rate <= 0.35:
+        reasons.append("low break-even capture requirement")
+    if competition_retention >= 0.55:
         reasons.append("strong demand-to-competition gap")
-    if traffic >= 0.70:
-        reasons.append("high transit footfall")
-    if population >= 0.70:
-        reasons.append("large target customer base")
-    if cost_affordability >= 0.70:
-        reasons.append("relatively affordable cost proxy")
+    if accessible_demand >= 15_000:
+        reasons.append("large accessible demand base")
 
     if not reasons:
-        return "balanced but not dominant across current indicators"
+        return "needs stronger capture, ticket size, or rent assumptions"
 
     return "; ".join(reasons)

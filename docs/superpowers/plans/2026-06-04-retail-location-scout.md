@@ -4,7 +4,7 @@
 
 **Goal:** Build an explainable location-intelligence prototype that ranks Taipei MRT-adjacent retail trade areas for coffee, beverage, and light-meal expansion decisions.
 
-**Architecture:** Public datasets are downloaded into `data/raw`, cleaned into a station-level feature table, scored with a transparent weighted formula, and delivered through a Streamlit dashboard. The product brief explains how this system can scale into scheduled ingestion, data lake storage, batch processing, a feature store, and a dashboard/API product.
+**Architecture:** Public datasets are downloaded into `data/raw`, cleaned into a station-level feature table, scored with a transparent economic opportunity model, and delivered through a Streamlit dashboard. The product brief explains how this system can scale into scheduled ingestion, data lake storage, batch processing, a feature store, and a dashboard/API product.
 
 **Tech Stack:** Python, csv/pandas, DuckDB optional, Streamlit, pydeck optional, government open data, OpenStreetMap optional.
 

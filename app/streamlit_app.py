@@ -53,7 +53,13 @@ else:
         summary["lowest_competition_station"],
         f'{summary["lowest_competition_count"]:,.0f} businesses',
     )
-    metric_4.metric("Trade Areas", f"{len(df)}")
+    if "top_feasibility_ratio" in summary:
+        metric_4.metric(
+            "Top Feasibility",
+            f'{summary["top_feasibility_ratio"]:.2f}x',
+        )
+    else:
+        metric_4.metric("Trade Areas", f"{len(df)}")
 
     controls_left, controls_right = st.columns([1, 2])
     with controls_left:
@@ -80,11 +86,39 @@ else:
             hide_index=True,
             column_config={
                 "station_name": st.column_config.TextColumn("Station"),
-                "location_score": st.column_config.ProgressColumn(
-                    "Score",
+                "economic_opportunity_index": st.column_config.ProgressColumn(
+                    "Economic Opportunity",
                     format="%.2f",
                     min_value=0,
                     max_value=100,
+                ),
+                "feasibility_ratio": st.column_config.NumberColumn(
+                    "Feasibility Ratio",
+                    format="%.2f",
+                ),
+                "break_even_capture_rate": st.column_config.NumberColumn(
+                    "Break-even Capture",
+                    format="%.2f",
+                ),
+                "accessible_demand": st.column_config.NumberColumn(
+                    "Accessible Demand",
+                    format="%,.0f",
+                ),
+                "competition_adjusted_customers": st.column_config.NumberColumn(
+                    "Adjusted Customers",
+                    format="%,.0f",
+                ),
+                "estimated_monthly_revenue": st.column_config.NumberColumn(
+                    "Revenue Proxy",
+                    format="%,.0f",
+                ),
+                "estimated_gross_profit": st.column_config.NumberColumn(
+                    "Gross Profit Proxy",
+                    format="%,.0f",
+                ),
+                "operating_cost_proxy": st.column_config.NumberColumn(
+                    "Cost Proxy",
+                    format="%,.0f",
                 ),
                 "monthly_entries_exits": st.column_config.NumberColumn(
                     "Monthly Footfall",
@@ -120,11 +154,13 @@ else:
         chart_data = filtered.set_index("station_name")[
             [
                 "location_score",
+                "feasibility_ratio",
                 "target_population",
                 "competitor_count",
                 "transport_access_index",
             ]
         ].copy()
+        chart_data["feasibility_ratio"] = chart_data["feasibility_ratio"] * 100
         chart_data["target_population"] = chart_data["target_population"] / chart_data[
             "target_population"
         ].max() * 100
@@ -135,6 +171,7 @@ else:
         chart_data = chart_data.rename(
             columns={
                 "location_score": "Score",
+                "feasibility_ratio": "Feasibility",
                 "target_population": "Target Population",
                 "competitor_count": "Competition Gap",
                 "transport_access_index": "Access",
@@ -147,18 +184,52 @@ else:
         detail_left, detail_right = st.columns([1, 1])
         with detail_left:
             st.subheader(selected["station_name"])
-            st.metric("Location Score", f'{selected["location_score"]:.2f}')
+            st.metric("Economic Opportunity", f'{selected["location_score"]:.2f}')
+            if "feasibility_ratio" in selected.index:
+                st.metric(
+                    "Feasibility Ratio",
+                    f'{selected["feasibility_ratio"]:.2f}x',
+                )
+            if "break_even_capture_rate" in selected.index:
+                st.metric(
+                    "Break-even Capture Rate",
+                    f'{selected["break_even_capture_rate"] * 100:.1f}%',
+                )
             st.write(selected["recommendation_reason"])
         with detail_right:
-            detail_rows = pd.DataFrame(
-                [
-                    {"Indicator": "Monthly Footfall", "Value": selected["monthly_entries_exits"]},
-                    {"Indicator": "Target Population", "Value": selected["target_population"]},
-                    {"Indicator": "Competitors", "Value": selected["competitor_count"]},
-                    {"Indicator": "Cost Index", "Value": selected["real_estate_cost_index"]},
-                    {"Indicator": "Access Index", "Value": selected["transport_access_index"]},
-                ]
-            )
+            detail_values = [
+                {"Indicator": "Monthly Footfall", "Value": selected["monthly_entries_exits"]},
+                {"Indicator": "Target Population", "Value": selected["target_population"]},
+                {"Indicator": "Competitors", "Value": selected["competitor_count"]},
+                {"Indicator": "Cost Index", "Value": selected["real_estate_cost_index"]},
+                {"Indicator": "Access Index", "Value": selected["transport_access_index"]},
+            ]
+            if "accessible_demand" in selected.index:
+                detail_values.extend(
+                    [
+                        {
+                            "Indicator": "Accessible Demand",
+                            "Value": selected["accessible_demand"],
+                        },
+                        {
+                            "Indicator": "Competition-Adjusted Customers",
+                            "Value": selected["competition_adjusted_customers"],
+                        },
+                        {
+                            "Indicator": "Estimated Monthly Revenue",
+                            "Value": selected["estimated_monthly_revenue"],
+                        },
+                        {
+                            "Indicator": "Operating Cost Proxy",
+                            "Value": selected["operating_cost_proxy"],
+                        },
+                        {
+                            "Indicator": "Gap Diagnostic",
+                            "Value": selected["profit_gap_proxy"],
+                        },
+                    ]
+                )
+            detail_rows = pd.DataFrame(detail_values)
             st.dataframe(detail_rows, use_container_width=True, hide_index=True)
 
     source_line = "Processed data"

@@ -32,7 +32,7 @@ flowchart LR
 1. Download public datasets into `data/raw`.
 2. Normalize field names and filter the initial scope to Taipei MRT-adjacent retail trade areas.
 3. Aggregate every source to a station-level feature table.
-4. Score each station with a transparent weighted formula.
+4. Score each station with a risk-adjusted economic opportunity model.
 5. Serve the ranked result through Streamlit and export the table for downstream analysis.
 
 ## Current Boundary

@@ -60,18 +60,18 @@ Implication: the target customer faces a crowded market. A tool that combines de
 
 ## Evidence 4: The System Produces Actionable Screening
 
-The Day 4 dashboard ranks six MRT-adjacent trade areas:
+The dashboard ranks six MRT-adjacent trade areas with a risk-adjusted economic opportunity model:
 
-| Rank | Station | Score | Key Reason |
-| ---: | --- | ---: | --- |
-| 1 | Jiantan | 65.37 | Strong demand-to-competition gap, large target population, relatively affordable cost proxy |
-| 2 | Taipei Main Station | 43.37 | High transit footfall |
-| 3 | Technology Building | 41.88 | Large target population and relatively affordable cost proxy |
-| 4 | Zhongshan | 32.57 | Balanced but not dominant |
-| 5 | Guting | 29.23 | Relatively affordable cost proxy |
-| 6 | Gongguan | 18.95 | Balanced but not dominant |
+| Rank | Station | Economic Opportunity Index | Feasibility Ratio | Break-even Capture Rate | Key Reason |
+| ---: | --- | ---: | ---: | ---: | --- |
+| 1 | Jiantan | 100.00 | 1.35x | 29.68% | Clears cost proxy under current assumptions; low break-even capture requirement; large accessible demand base |
+| 2 | Taipei Main Station | 89.05 | 0.89x | 41.63% | Near break-even under conservative assumptions; large accessible demand base |
+| 3 | Guting | 78.28 | 0.78x | 47.36% | Moderate feasibility with execution sensitivity |
+| 4 | Technology Building | 69.09 | 0.69x | 34.57% | Moderate feasibility; low break-even capture requirement; large accessible demand base |
+| 5 | Gongguan | 62.72 | 0.63x | 59.11% | Needs stronger capture, ticket size, or rent assumptions |
+| 6 | Zhongshan | 50.69 | 0.51x | 37.74% | Large accessible demand base, but high competition pressure |
 
-The ranking is explainable. Taipei Main Station has the strongest footfall, but its cost proxy is high and the demand-to-competition gap is weaker. Jiantan ranks first because it combines a large 20-44 target population, lower competitor count, and lower cost proxy.
+The ranking is explainable without implying that lower-ranked trade areas are poor markets. Taipei Main Station has the strongest footfall and remains near break-even, but the model penalizes its high cost proxy and competition pressure. Jiantan ranks first because its demand, competition, and cost proxies produce the strongest feasibility ratio under the current transparent assumptions.
 
 ## Evidence 5: Time Saved
 
@@ -119,4 +119,4 @@ This pricing should be framed as a hypothesis validated by competitor pricing an
 
 ## Report-Ready Claim
 
-The demand evidence supports a defensible product wedge: small retail operators face expensive and uncertain site-selection decisions; paid location-intelligence products already exist; Taipei public data shows dense food-service competition; and the implemented dashboard turns fragmented open data into a ranked, explainable shortlist. The product can be monetized as a low-cost report or monthly dashboard because the price is small relative to opening costs and because it saves manual research time during early site screening.
+The demand evidence supports a defensible product wedge: small retail operators face expensive and uncertain site-selection decisions; paid location-intelligence products already exist; Taipei public data shows dense food-service competition; and the implemented dashboard turns fragmented open data into a ranked, explainable economic-opportunity shortlist. The product can be monetized as a low-cost report or monthly dashboard because the price is small relative to opening costs and because it saves manual research time during early site screening.

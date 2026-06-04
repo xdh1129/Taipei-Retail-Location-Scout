@@ -40,7 +40,7 @@ Describe ingestion, storage, processing, scoring, and dashboard delivery. Includ
 Explain the current implementation:
 
 - Station-level feature table.
-- Transparent scoring formula.
+- Risk-adjusted economic opportunity scoring model.
 - Streamlit dashboard.
 - Reproducible sample pipeline.
 - Demand evidence document and public-source citations.

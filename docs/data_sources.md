@@ -42,7 +42,7 @@ Access date: 2026-06-04. The competitor source manifest is stored at `data/proce
 | --- | --- | --- | --- |
 | `data/processed/competitor_counts_by_district.csv` | https://data.gov.tw/dataset/108355 | Stream the official restaurant business registration CSV and count active businesses by configured station district. | The full source CSV is about 21 MB. To avoid local disk pressure, the project stores only the reproducible district summary and manifest. |
 | `data/processed/station_features.csv` | Core MRT, entrance, population files plus competitor summary | Build six station-level rows using `scripts/build_station_features.py`. | Required columns: station name, monthly entries/exits, target population, competitor count, cost proxy, transport access index. |
-| `data/processed/station_scores.csv` | `data/processed/station_features.csv` | Run transparent weighted scoring with `scripts/run_scoring.py`. | The scoring script prefers processed features when present and falls back to bundled sample data otherwise. |
+| `data/processed/station_scores.csv` | `data/processed/station_features.csv` | Run risk-adjusted economic opportunity scoring with `scripts/run_scoring.py`. | The scoring script prefers processed features when present and falls back to bundled sample data otherwise. |
 
 Feature definitions:
 
