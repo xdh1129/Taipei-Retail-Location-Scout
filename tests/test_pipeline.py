@@ -176,6 +176,14 @@ class StagePopulationCostTests(unittest.TestCase):
         self.assertEqual(rows["臺北市中正區"], 4)
         self.assertNotIn("新北市板橋區", rows)
 
+    def test_population_with_no_matching_age_columns_returns_zero(self):
+        con = connect()
+        con.execute("CREATE TABLE raw_population (區域別 VARCHAR)")
+        con.execute("INSERT INTO raw_population VALUES ('臺北市大安區')")
+        stage_population(con, start_age=20, end_age=44)
+        rows = dict(con.execute("SELECT district, target_population FROM stg_population").fetchall())
+        self.assertEqual(rows["臺北市大安區"], 0)
+
     def test_cost_index_minmax_scaled_to_50_100(self):
         con = connect()
         con.execute("CREATE TABLE raw_land_value (district VARCHAR, land_value DOUBLE)")
@@ -192,6 +200,16 @@ class StagePopulationCostTests(unittest.TestCase):
         self.assertAlmostEqual(rows["臺北市大安區"], 100.0)  # max
         self.assertAlmostEqual(rows["臺北市士林區"], 50.0)   # min
         self.assertAlmostEqual(rows["臺北市中正區"], 50.0 + 50.0 * ((100 - 50) / (200 - 50)))
+
+    def test_cost_index_equal_values_returns_75(self):
+        con = connect()
+        con.execute("CREATE TABLE raw_land_value (district VARCHAR, land_value DOUBLE)")
+        con.executemany("INSERT INTO raw_land_value VALUES (?, ?)",
+                        [("臺北市大安區", 120.0), ("臺北市中正區", 120.0)])
+        stage_cost(con)
+        rows = dict(con.execute("SELECT district, real_estate_cost_index FROM stg_cost").fetchall())
+        self.assertAlmostEqual(rows["臺北市大安區"], 75.0)
+        self.assertAlmostEqual(rows["臺北市中正區"], 75.0)
 
 
 if __name__ == "__main__":

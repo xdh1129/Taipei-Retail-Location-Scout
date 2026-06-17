@@ -134,18 +134,18 @@ def stage_population(con: duckdb.DuckDBPyConnection, src_table: str = "raw_popul
         male_col = f"{age}歲-男"
         female_col = f"{age}歲-女"
         if male_col in columns:
-            age_terms_list.append(f'COALESCE("{male_col}", 0)')
+            age_terms_list.append(f'COALESCE(CAST("{male_col}" AS BIGINT), 0)')
         if female_col in columns:
-            age_terms_list.append(f'COALESCE("{female_col}", 0)')
+            age_terms_list.append(f'COALESCE(CAST("{female_col}" AS BIGINT), 0)')
 
-    age_terms = " + ".join(age_terms_list)
+    age_terms = " + ".join(age_terms_list) if age_terms_list else "0"
 
     con.execute(
         f"""
         CREATE OR REPLACE TABLE stg_population AS
         SELECT
             normalize_taipei_name(區域別) AS district,
-            sum({age_terms}) AS target_population
+            CAST(sum({age_terms}) AS BIGINT) AS target_population
         FROM {src_table}
         WHERE normalize_taipei_name(區域別) LIKE '臺北市%'
         GROUP BY district
