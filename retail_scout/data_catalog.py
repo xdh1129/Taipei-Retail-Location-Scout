@@ -74,6 +74,25 @@ RESTAURANT_COMPETITION_SOURCES = [
     ),
 ]
 
+GEO_PUBLIC_SOURCES = [
+    RawDataSource(
+        source_id="taipei_districts",
+        title="Taipei City administrative district boundaries (鄉鎮市區界)",
+        dataset_page="https://data.gov.tw/dataset/7441",
+        download_url="https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=72874C55-884D-4CEA-B7D6-F60B0BE85AB0",
+        raw_filename="taipei_districts.zip",
+        agency="Ministry of the Interior, Department of Land Administration",
+    ),
+    RawDataSource(
+        source_id="land_value_by_district",
+        title="Taipei City announced land value by district (公告地價/現值)",
+        dataset_page="https://data.gov.tw/dataset/26859",
+        download_url="https://data.taipei/api/dataset/placeholder/resource/placeholder/download",
+        raw_filename="land_value_by_district.csv",
+        agency="Department of Land Administration, Taipei City Government",
+    ),
+]
+
 
 def build_manifest(raw_dir: Path, access_date: str) -> dict[str, object]:
     return {
@@ -101,3 +120,7 @@ def is_probable_csv_payload(payload: bytes) -> bool:
 
     sample = stripped[:4096]
     return b"," in sample and (b"\n" in sample or b"\r" in sample)
+
+
+def is_probable_zip_payload(payload: bytes) -> bool:
+    return payload[:4] == b"PK\x03\x04"

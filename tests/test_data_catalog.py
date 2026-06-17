@@ -47,6 +47,21 @@ class DataCatalogTests(unittest.TestCase):
         self.assertFalse(is_probable_csv_payload(b"<!DOCTYPE html><html></html>"))
         self.assertTrue(is_probable_csv_payload("a,b,c\n1,2,3\n".encode("utf-8")))
 
+    def test_geo_public_sources_include_boundary_and_land_value(self):
+        from retail_scout.data_catalog import GEO_PUBLIC_SOURCES
+
+        source_ids = {source.source_id for source in GEO_PUBLIC_SOURCES}
+        self.assertEqual(source_ids, {"taipei_districts", "land_value_by_district"})
+        for source in GEO_PUBLIC_SOURCES:
+            self.assertTrue(source.dataset_page.startswith("http"))
+            self.assertTrue(source.download_url.startswith("http"))
+
+    def test_is_probable_zip_payload_detects_zip_magic(self):
+        from retail_scout.data_catalog import is_probable_zip_payload
+
+        self.assertTrue(is_probable_zip_payload(b"PK\x03\x04rest-of-zip"))
+        self.assertFalse(is_probable_zip_payload(b"<!DOCTYPE html>"))
+
 
 if __name__ == "__main__":
     unittest.main()
