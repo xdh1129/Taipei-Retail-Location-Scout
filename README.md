@@ -66,7 +66,7 @@ Pipeline stages:
 
 | Step | Command | Output |
 | --- | --- | --- |
-| Download public data | `python3 scripts/download_public_data.py` | MRT entries/exits, MRT entrance coordinates, population CSVs, Taipei district boundary shapefile/zip, and land-value CSV under `data/raw/` |
+| Download public data | `python3 scripts/download_public_data.py` | MRT entries/exits, MRT entrance coordinates, population CSV, restaurant registry CSV, and the Taipei district boundary TopoJSON (`taipei_districts.json`) under `data/raw/` |
 | Build competitor summary | `python3 scripts/build_competitor_summary.py` | `data/processed/competitor_counts_by_district.csv` |
 | Build feature table | `python3 scripts/build_station_features.py` | `data/processed/station_features.parquet` and `data/processed/station_features.csv` |
 | Score locations | `python3 scripts/run_scoring.py` | `data/processed/station_scores.parquet` and `data/processed/station_scores.csv` |
@@ -86,8 +86,10 @@ Primary data sources:
 | Taipei MRT entrance coordinates | Transport access proxy | `data/raw/mrt_entrances.csv` |
 | Village household and single-age population | 20-44 target population proxy | `data/raw/population_by_village.csv` |
 | Restaurant business registrations | Competitor density proxy | `data/processed/competitor_counts_by_district.csv` |
-| Taipei City administrative district boundaries | Spatial point-in-district join from MRT entrances to districts | `data/raw/taipei_districts.zip` |
-| Taipei City announced land value by district | Real-estate cost index, min-max scaled to `[50, 100]` | `data/raw/land_value_by_district.csv` |
+| Taiwan township/district boundaries (current, MOI-derived TopoJSON via `taiwan-atlas` on jsDelivr) | Spatial point-in-district join from MRT entrances to districts; filtered to Taipei City | `data/raw/taipei_districts.json` |
+| District land value (real-estate cost index, min-max scaled to `[50, 100]`) | Cost pressure in the scoring model | **Bundled stand-in** — `data/reference/land_value_by_district.csv` (see note below) |
+
+> **Land value is a transparent stand-in, not a live dataset.** A clean per-district open dataset of announced land value (公告地價/現值) was not available behind a working download endpoint, so the repository ships a small, documented reference table of relative Taipei City district land values at `data/reference/land_value_by_district.csv`. Because the pipeline min-max scales it into `[50, 100]`, only the relative ordering affects the score. To use real data, replace that file with a per-district aggregate of the government land-value dataset (same `district,land_value` columns); no code change is needed. Details: `data/reference/README.md`.
 
 Source manifests:
 
@@ -207,7 +209,8 @@ Use these files when writing a product brief, technical note, or external projec
 - Data sources: `docs/data_sources.md`
 - Demand evidence: `docs/demand_evidence.md`
 - Report outline: `docs/report_outline.md`
-- Implementation plan and checklist: `docs/superpowers/plans/2026-06-04-retail-location-scout.md`
+- Original implementation plan and checklist: `docs/superpowers/plans/2026-06-04-retail-location-scout.md`
+- DuckDB pipeline upgrade design and plan: `docs/superpowers/specs/2026-06-18-duckdb-technical-upgrade-design.md`, `docs/superpowers/plans/2026-06-18-duckdb-technical-upgrade.md`
 
 Any external writeup should explain that this is a first-pass location screening tool. It should not claim to predict store revenue.
 

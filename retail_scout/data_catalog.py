@@ -74,24 +74,30 @@ RESTAURANT_COMPETITION_SOURCES = [
     ),
 ]
 
+# Downloadable geo source for the spatial point-in-district join. The data are the
+# current Taiwan township/district boundaries (MOI-derived), packaged by the
+# `taiwan-atlas` project as TopoJSON and served via the jsDelivr CDN. DuckDB's
+# `spatial` extension reads this TopoJSON directly with `ST_Read`, and it already
+# carries the `COUNTYNAME` / `TOWNNAME` fields the pipeline expects.
 GEO_PUBLIC_SOURCES = [
     RawDataSource(
         source_id="taipei_districts",
-        title="Taipei City administrative district boundaries (鄉鎮市區界)",
-        dataset_page="https://data.gov.tw/dataset/7441",
-        download_url="https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=72874C55-884D-4CEA-B7D6-F60B0BE85AB0",
-        raw_filename="taipei_districts.zip",
-        agency="Ministry of the Interior, Department of Land Administration",
-    ),
-    RawDataSource(
-        source_id="land_value_by_district",
-        title="Taipei City announced land value by district (公告地價/現值)",
-        dataset_page="https://data.gov.tw/dataset/26859",
-        download_url="https://data.taipei/api/dataset/placeholder/resource/placeholder/download",
-        raw_filename="land_value_by_district.csv",
-        agency="Department of Land Administration, Taipei City Government",
+        title="Taiwan township/district boundaries (current), MOI-derived TopoJSON",
+        dataset_page="https://github.com/dkaoster/taiwan-atlas",
+        download_url="https://cdn.jsdelivr.net/npm/taiwan-atlas@2021.9.20/towns-10t.json",
+        raw_filename="taipei_districts.json",
+        agency="Ministry of the Interior (boundaries) via taiwan-atlas, served by jsDelivr",
+        license="MIT (taiwan-atlas packaging); source boundaries Open Government Data License",
     ),
 ]
+
+
+# Land value is NOT yet wired to a live open dataset. A small, transparent
+# district-level stand-in table is bundled in the repository (tracked, not
+# downloaded) and documented in data/reference/README.md and docs/data_sources.md.
+# The scoring pipeline min-max scales it into [50, 100], so only the relative
+# ordering matters. Production should replace it with a real 公告地價/現值 aggregate.
+LAND_VALUE_STANDIN_PATH = "data/reference/land_value_by_district.csv"
 
 
 def build_manifest(raw_dir: Path, access_date: str) -> dict[str, object]:
@@ -124,3 +130,8 @@ def is_probable_csv_payload(payload: bytes) -> bool:
 
 def is_probable_zip_payload(payload: bytes) -> bool:
     return payload[:4] == b"PK\x03\x04"
+
+
+def is_probable_json_payload(payload: bytes) -> bool:
+    stripped = payload.lstrip()
+    return stripped[:1] in (b"{", b"[")

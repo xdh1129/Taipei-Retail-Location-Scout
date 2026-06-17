@@ -10,6 +10,9 @@ from retail_scout.pipeline import connect, export_table, run_full_pipeline
 
 RAW_DIR = ROOT / "data" / "raw"
 PROCESSED_DIR = ROOT / "data" / "processed"
+# Land value has no live download yet; a tracked, documented stand-in is read
+# directly from data/reference/ (see data/reference/README.md).
+LAND_VALUE_PATH = ROOT / "data" / "reference" / "land_value_by_district.csv"
 
 
 def main() -> None:
@@ -20,8 +23,8 @@ def main() -> None:
         entrances_csv=RAW_DIR / "mrt_entrances.csv",
         population_csv=RAW_DIR / "population_by_village.csv",
         registry_csv=RAW_DIR / "restaurant_businesses.csv",
-        districts_geo=RAW_DIR / "taipei_districts.zip",
-        land_value_csv=RAW_DIR / "land_value_by_district.csv",
+        districts_geo=RAW_DIR / "taipei_districts.json",
+        land_value_csv=LAND_VALUE_PATH,
     )
     export_table(
         con, "mart_station_features",
