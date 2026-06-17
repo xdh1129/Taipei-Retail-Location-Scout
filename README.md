@@ -9,19 +9,12 @@ The initial customer is a small coffee, beverage, or light-meal chain evaluating
 Implemented:
 
 - Reproducible public-data download scripts.
-- Station-level feature engineering pipeline.
+- A DuckDB-driven medallion pipeline (`retail_scout/pipeline.py`) that stages raw CSV/shapefile data in SQL, resolves each station to a Taipei City district with a spatial point-in-district join, and builds a station-level feature mart.
 - Transparent scoring model with tests.
 - Streamlit dashboard with ranking, filtering, indicator charts, selected-area details, and CSV export.
 - Demand evidence and willingness-to-pay notes for early go-to-market planning.
 
-Current demo trade areas:
-
-- 台北車站
-- 中山
-- 公館
-- 古亭
-- 科技大樓
-- 劍潭
+Scope: all Taipei City MRT stations resolved by the spatial join, not a fixed list of demo trade areas. Stations whose entrances fall outside Taipei City district polygons are dropped, and the dropped count is logged.
 
 ## Quick Start
 
@@ -73,13 +66,15 @@ Pipeline stages:
 
 | Step | Command | Output |
 | --- | --- | --- |
-| Download public data | `python3 scripts/download_public_data.py` | MRT entries/exits, MRT entrance coordinates, population CSVs under `data/raw/` |
+| Download public data | `python3 scripts/download_public_data.py` | MRT entries/exits, MRT entrance coordinates, population CSVs, Taipei district boundary shapefile/zip, and land-value CSV under `data/raw/` |
 | Build competitor summary | `python3 scripts/build_competitor_summary.py` | `data/processed/competitor_counts_by_district.csv` |
-| Build feature table | `python3 scripts/build_station_features.py` | `data/processed/station_features.csv` |
-| Score locations | `python3 scripts/run_scoring.py` | `data/processed/station_scores.csv` |
+| Build feature table | `python3 scripts/build_station_features.py` | `data/processed/station_features.parquet` and `data/processed/station_features.csv` |
+| Score locations | `python3 scripts/run_scoring.py` | `data/processed/station_scores.parquet` and `data/processed/station_scores.csv` |
 | Serve dashboard | `streamlit run app/streamlit_app.py` | Local browser dashboard |
 
-Note: the restaurant registration source is about 21 MB. To avoid local disk pressure, `build_competitor_summary.py` streams the official CSV and stores only the reproducible district-level competitor summary.
+The processing layer is DuckDB plus Parquet: `retail_scout/pipeline.py` stages every raw source as a SQL table inside DuckDB, performs the spatial point-in-district join with DuckDB's `spatial` extension (`ST_Read` / `ST_Within`), and writes the feature mart and scores as Parquet with a CSV export alongside. The dashboard continues to read the CSV.
+
+Note: the restaurant registration source is about 21 MB. The full registry is now loaded into DuckDB and aggregated to district-level competitor counts entirely in SQL via `build_competitor_summary.py`, which stores only the reproducible district-level competitor summary.
 
 ## Data Sources
 
@@ -91,6 +86,8 @@ Primary data sources:
 | Taipei MRT entrance coordinates | Transport access proxy | `data/raw/mrt_entrances.csv` |
 | Village household and single-age population | 20-44 target population proxy | `data/raw/population_by_village.csv` |
 | Restaurant business registrations | Competitor density proxy | `data/processed/competitor_counts_by_district.csv` |
+| Taipei City administrative district boundaries | Spatial point-in-district join from MRT entrances to districts | `data/raw/taipei_districts.zip` |
+| Taipei City announced land value by district | Real-estate cost index, min-max scaled to `[50, 100]` | `data/raw/land_value_by_district.csv` |
 
 Source manifests:
 
@@ -137,20 +134,23 @@ Location Score = Economic Opportunity Index
 Feature definitions:
 
 - `monthly_entries_exits`: latest MRT annual entries plus exits, divided by 12.
-- `target_population`: residents aged 20-44 in the configured station district.
-- `competitor_count`: active restaurant business registrations in the configured station district.
-- `real_estate_cost_index`: district-level cost proxy.
-- `transport_access_index`: station entrance count normalized within demo stations.
+- `target_population`: residents aged 20-44 in the station's resolved district.
+- `competitor_count`: active restaurant business registrations in the station's resolved district, counted from the full registry in DuckDB.
+- `real_estate_cost_index`: district-level mean announced land value, min-max scaled into `[50, 100]`.
+- `transport_access_index`: station entrance count normalized within all resolved Taipei City stations.
 - `feasibility_ratio`: estimated gross profit divided by operating cost proxy.
 - `break_even_capture_rate`: required monthly customers divided by accessible demand.
 
 Current score output:
 
 ```text
+data/processed/station_scores.parquet
 data/processed/station_scores.csv
 ```
 
-At the time of the current processed run, the top-ranked trade area is `劍潭`, with a feasibility ratio above 1.0. `台北車站` remains a strong but more expensive opportunity: its high foot traffic keeps the index high, while cost and competition pressure keep it below the top-ranked area.
+**Note:** the example below reflects the previous six-station demo run and has not been regenerated against the new DuckDB pipeline. It must be regenerated from the actual new output CSV once the full Taipei City pipeline (including the district-boundary and land-value datasets) has been run against live data; do not treat these numbers as current.
+
+At the time of the previous six-station processed run, the top-ranked trade area was `劍潭`, with a feasibility ratio above 1.0. `台北車站` remained a strong but more expensive opportunity: its high foot traffic kept the index high, while cost and competition pressure kept it below the top-ranked area.
 
 ## Dashboard
 
@@ -172,18 +172,18 @@ Dashboard features:
 retail_scout/
   data_catalog.py            Reproducible source catalog.
   dashboard.py               Dashboard data helpers.
-  features.py                Feature engineering helpers.
+  pipeline.py                DuckDB medallion pipeline: SQL staging, spatial join, feature mart, Parquet/CSV export.
   scoring.py                 Core location scoring logic.
 scripts/
   download_public_data.py    Downloads core public datasets.
-  build_competitor_summary.py Streams restaurant registrations into competitor counts.
-  build_station_features.py  Builds the station-level feature table.
-  run_scoring.py             Builds ranked station scores from a feature CSV.
+  build_competitor_summary.py Loads the full restaurant registry into DuckDB and counts competitors by district.
+  build_station_features.py  Runs the DuckDB pipeline to build the station-level feature mart.
+  run_scoring.py             Builds ranked station scores from a feature table.
 app/
   streamlit_app.py           Streamlit dashboard entry point.
 data/
   raw/                       Local raw data outputs; large CSVs are ignored by git.
-  processed/                 Reproducible processed feature and score outputs.
+  processed/                 Reproducible processed feature and score outputs (Parquet + CSV).
   sample/                    Small fallback sample data.
 docs/
   architecture.md            System architecture diagrams and data flow.
@@ -194,7 +194,7 @@ docs/
 tests/
   test_dashboard.py
   test_data_catalog.py
-  test_features.py
+  test_pipeline.py
   test_run_scoring_script.py
   test_scoring.py
 ```
@@ -225,8 +225,9 @@ The rationale is documented in `docs/demand_evidence.md`: the price is small rel
 - No interviews were conducted; demand validation uses public-data evidence.
 - Competition is counted at district level, not exact walking radius.
 - Real-estate cost is a district-level proxy, not actual retail rent.
-- The model ranks relative attractiveness among configured demo stations; it does not predict revenue.
-- Future versions should add finer-grained POI/geocoding, rental data, user feedback, and validation against actual store outcomes.
+- The model ranks relative attractiveness among all resolved Taipei City MRT stations; it does not predict revenue.
+- Coverage is limited to Taipei City; New Taipei City stations are not yet in scope.
+- Future versions should add finer-grained POI/geocoding, walking-radius competition, rental data, user feedback, and validation against actual store outcomes.
 
 ## Troubleshooting
 
@@ -249,6 +250,6 @@ If competitor data fails due to disk pressure, rerun:
 python3 scripts/build_competitor_summary.py
 ```
 
-The script streams the source CSV and writes only a small summary file.
+The script aggregates the full registry inside DuckDB and writes only a small summary file.
 
 If public-data endpoints change, update `retail_scout/data_catalog.py` and rerun the relevant download script.

@@ -45,7 +45,9 @@ Implication: customers already pay for location intelligence. A Taiwan-focused, 
 
 ## Evidence 3: Public Data Shows Dense Competition
 
-This project streamed the official restaurant business registration dataset from data.gov.tw and counted active restaurant businesses in the configured demo districts. The full raw file is not stored because of local disk limits; the reproducible derived summary is stored in `data/processed/competitor_counts_by_district.csv`, with source details in `data/processed/competitor_summary_manifest.json`.
+**Note:** the table below reflects the previous six-station demo run (district-level counts for four configured demo districts). It has not been regenerated against the new DuckDB pipeline, which now loads the full restaurant registry and counts competitors for every Taipei City district resolved by the spatial join. This table must be regenerated from the actual new output once the full Taipei City pipeline has been run against live data; the numbers below are left in place rather than fabricated.
+
+This project loaded the official restaurant business registration dataset from data.gov.tw into DuckDB and counted active restaurant businesses in the configured demo districts. The full raw file is not stored because of local disk limits; the reproducible derived summary is stored in `data/processed/competitor_counts_by_district.csv`, with source details in `data/processed/competitor_summary_manifest.json`.
 
 | District | Active Restaurant Registrations |
 | --- | ---: |
@@ -59,6 +61,8 @@ Across the four configured districts, the system observes 2,482 active restauran
 Implication: the target customer faces a crowded market. A tool that combines demand proxies and competition proxies has a concrete decision context.
 
 ## Evidence 4: The System Produces Actionable Screening
+
+**Note:** the ranking below reflects the previous six-station demo run. The pipeline now scores all Taipei City MRT stations resolved by the spatial join, not six hardcoded demo stations, so this table must be regenerated from the actual new `data/processed/station_scores.csv` output once the full Taipei City pipeline has been run against live data. The numbers below are left in place with this note rather than fabricated.
 
 The dashboard ranks six MRT-adjacent trade areas with a risk-adjusted economic opportunity model:
 
