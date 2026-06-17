@@ -121,3 +121,54 @@ def stage_competitors(con: duckdb.DuckDBPyConnection, src_table: str = "raw_regi
         GROUP BY district
         """
     )
+
+
+def stage_population(con: duckdb.DuckDBPyConnection, src_table: str = "raw_population",
+                     start_age: int = 20, end_age: int = 44) -> None:
+    # Get the list of columns in the source table
+    columns = [col[0] for col in con.execute(f"DESCRIBE {src_table}").fetchall()]
+
+    # Build age terms only for columns that exist
+    age_terms_list = []
+    for age in range(start_age, end_age + 1):
+        male_col = f"{age}歲-男"
+        female_col = f"{age}歲-女"
+        if male_col in columns:
+            age_terms_list.append(f'COALESCE("{male_col}", 0)')
+        if female_col in columns:
+            age_terms_list.append(f'COALESCE("{female_col}", 0)')
+
+    age_terms = " + ".join(age_terms_list)
+
+    con.execute(
+        f"""
+        CREATE OR REPLACE TABLE stg_population AS
+        SELECT
+            normalize_taipei_name(區域別) AS district,
+            sum({age_terms}) AS target_population
+        FROM {src_table}
+        WHERE normalize_taipei_name(區域別) LIKE '臺北市%'
+        GROUP BY district
+        """
+    )
+
+
+def stage_cost(con: duckdb.DuckDBPyConnection, src_table: str = "raw_land_value",
+               value_field: str = "land_value", district_field: str = "district") -> None:
+    con.execute(
+        f"""
+        CREATE OR REPLACE TABLE stg_cost AS
+        WITH means AS (
+            SELECT normalize_taipei_name("{district_field}") AS district,
+                   avg(CAST("{value_field}" AS DOUBLE)) AS v
+            FROM {src_table}
+            GROUP BY district
+        ),
+        bounds AS (SELECT min(v) AS lo, max(v) AS hi FROM means)
+        SELECT
+            m.district,
+            CASE WHEN b.hi = b.lo THEN 75.0
+                 ELSE 50.0 + 50.0 * (m.v - b.lo) / (b.hi - b.lo) END AS real_estate_cost_index
+        FROM means m, bounds b
+        """
+    )

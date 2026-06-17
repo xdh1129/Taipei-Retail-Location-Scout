@@ -2,7 +2,7 @@ import unittest
 
 import duckdb
 
-from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances, stage_station_district, stage_competitors
+from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances, stage_station_district, stage_competitors, stage_cost, stage_population
 
 
 class StationNameTests(unittest.TestCase):
@@ -150,6 +150,48 @@ class StageCompetitorsTests(unittest.TestCase):
         self.assertEqual(rows["臺北市大安區"], 2)
         self.assertEqual(rows["臺北市中正區"], 1)
         self.assertNotIn("新北市板橋區", rows)
+
+
+class StagePopulationCostTests(unittest.TestCase):
+    def test_population_sums_target_ages_for_taipei(self):
+        con = connect()
+        con.execute(
+            'CREATE TABLE raw_population (區域別 VARCHAR, "20歲-男" BIGINT, "20歲-女" BIGINT, "44歲-男" BIGINT, "44歲-女" BIGINT)'
+        )
+        con.executemany(
+            "INSERT INTO raw_population VALUES (?, ?, ?, ?, ?)",
+            [
+                ("臺北市大安區", 10, 12, 7, 9),
+                ("台北市中正區", 1, 1, 1, 1),     # 台 -> 臺
+                ("新北市板橋區", 100, 100, 100, 100),  # excluded
+            ],
+        )
+
+        stage_population(con, start_age=20, end_age=44)
+        rows = dict(
+            con.execute("SELECT district, target_population FROM stg_population").fetchall()
+        )
+
+        self.assertEqual(rows["臺北市大安區"], 38)
+        self.assertEqual(rows["臺北市中正區"], 4)
+        self.assertNotIn("新北市板橋區", rows)
+
+    def test_cost_index_minmax_scaled_to_50_100(self):
+        con = connect()
+        con.execute("CREATE TABLE raw_land_value (district VARCHAR, land_value DOUBLE)")
+        con.executemany(
+            "INSERT INTO raw_land_value VALUES (?, ?)",
+            [("臺北市大安區", 200.0), ("臺北市中正區", 100.0), ("臺北市士林區", 50.0)],
+        )
+
+        stage_cost(con)
+        rows = dict(
+            con.execute("SELECT district, real_estate_cost_index FROM stg_cost ORDER BY district").fetchall()
+        )
+
+        self.assertAlmostEqual(rows["臺北市大安區"], 100.0)  # max
+        self.assertAlmostEqual(rows["臺北市士林區"], 50.0)   # min
+        self.assertAlmostEqual(rows["臺北市中正區"], 50.0 + 50.0 * ((100 - 50) / (200 - 50)))
 
 
 if __name__ == "__main__":
