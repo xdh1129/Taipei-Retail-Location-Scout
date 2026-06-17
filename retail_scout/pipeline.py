@@ -13,4 +13,5 @@ def normalize_taipei_name(value: str) -> str:
 
 def normalize_station_name(raw: str) -> str:
     name = raw.strip()
-    return _LINE_SUFFIX_RE.sub("", name)
+    stripped = _LINE_SUFFIX_RE.sub("", name)
+    return stripped if stripped else name

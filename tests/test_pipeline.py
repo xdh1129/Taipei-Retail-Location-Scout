@@ -16,6 +16,10 @@ class StationNameTests(unittest.TestCase):
         self.assertEqual(normalize_station_name("公館"), "公館")
         self.assertEqual(normalize_station_name("科技大樓"), "科技大樓")
 
+    def test_does_not_blank_out_bare_latin_token(self):
+        self.assertEqual(normalize_station_name("R"), "R")
+        self.assertEqual(normalize_station_name("BR"), "BR")
+
     def test_normalize_taipei_name(self):
         self.assertEqual(normalize_taipei_name("台北市大安區"), "臺北市大安區")
 
