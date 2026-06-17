@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import duckdb
 
@@ -202,3 +203,28 @@ def build_feature_mart(con: duckdb.DuckDBPyConnection) -> int:
     total = con.execute("SELECT count(*) FROM stg_stations").fetchone()[0]
     kept = con.execute("SELECT count(*) FROM mart_station_features").fetchone()[0]
     return total - kept
+
+
+def export_table(con: duckdb.DuckDBPyConnection, table: str,
+                 parquet_path: Path, csv_path: Path) -> None:
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
+    con.execute(f"COPY {table} TO '{parquet_path}' (FORMAT PARQUET)")
+    con.execute(f"COPY {table} TO '{csv_path}' (FORMAT CSV, HEADER)")
+
+
+def run_full_pipeline(con: duckdb.DuckDBPyConnection, *, mrt_csv: Path, entrances_csv: Path,
+                      population_csv: Path, registry_csv: Path, districts_geo: Path,
+                      land_value_csv: Path) -> int:
+    con.execute(f"CREATE TABLE raw_mrt AS SELECT * FROM read_csv_auto('{mrt_csv}', header=true)")
+    con.execute(f"CREATE TABLE raw_entrances AS SELECT * FROM read_csv_auto('{entrances_csv}', header=true)")
+    con.execute(f"CREATE TABLE raw_population AS SELECT * FROM read_csv_auto('{population_csv}', header=true)")
+    con.execute(f"CREATE TABLE raw_registry AS SELECT * FROM read_csv_auto('{registry_csv}', header=true)")
+    con.execute(f"CREATE TABLE raw_land_value AS SELECT * FROM read_csv_auto('{land_value_csv}', header=true)")
+    stage_stations(con)
+    stage_entrances(con)
+    stage_districts(con, str(districts_geo))
+    stage_station_district(con)
+    stage_competitors(con)
+    stage_population(con)
+    stage_cost(con)
+    return build_feature_mart(con)

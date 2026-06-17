@@ -72,6 +72,14 @@ def write_scores(path: Path, rows: list[dict[str, object]]) -> None:
         writer.writerows(rows)
 
 
+def write_scores_parquet(parquet_path: Path, csv_path: Path, rows: list[dict[str, object]]) -> None:
+    import duckdb
+
+    write_scores(csv_path, rows)  # reuse CSV writer
+    con = duckdb.connect()
+    con.execute(f"COPY (SELECT * FROM read_csv_auto('{csv_path}', header=true)) TO '{parquet_path}' (FORMAT PARQUET)")
+
+
 def main() -> None:
     input_path = choose_feature_input_path(
         processed_path=PROCESSED_INPUT_PATH,
@@ -79,7 +87,9 @@ def main() -> None:
     )
     rows = load_feature_rows(input_path)
     scored_rows = compute_location_scores(rows)
-    write_scores(OUTPUT_PATH, scored_rows)
+    write_scores_parquet(
+        ROOT / "data" / "processed" / "station_scores.parquet", OUTPUT_PATH, scored_rows,
+    )
     print(f"Read feature rows from {input_path}")
     print(f"Wrote {len(scored_rows)} scored station rows to {OUTPUT_PATH}")
 

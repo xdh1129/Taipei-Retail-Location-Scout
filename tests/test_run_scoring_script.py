@@ -60,6 +60,29 @@ class RunScoringScriptTests(unittest.TestCase):
         self.assertIn("break_even_capture_rate", header)
         self.assertNotIn(b"\r", raw_content)
 
+    def test_write_scores_writes_parquet_and_csv(self):
+        import duckdb
+        from scripts.run_scoring import write_scores_parquet
+
+        with tempfile.TemporaryDirectory() as tmp:
+            rows = [{
+                "station_name": "X", "monthly_entries_exits": 1.0, "target_population": 2.0,
+                "competitor_count": 3.0, "real_estate_cost_index": 60.0, "transport_access_index": 0.5,
+                "accessible_demand": 1.0, "competition_adjusted_customers": 1.0,
+                "estimated_monthly_revenue": 1.0, "estimated_gross_profit": 1.0,
+                "operating_cost_proxy": 1.0, "feasibility_ratio": 1.0,
+                "economic_opportunity_index": 1.0, "profit_gap_proxy": 1.0,
+                "break_even_capture_rate": 1.0, "location_score": 1.0,
+                "recommendation_reason": "ok",
+            }]
+            pq = Path(tmp) / "s.parquet"
+            csv_path = Path(tmp) / "s.csv"
+            write_scores_parquet(pq, csv_path, rows)
+            self.assertTrue(pq.exists())
+            self.assertTrue(csv_path.exists())
+            n = duckdb.connect().execute(f"SELECT count(*) FROM '{pq}'").fetchone()[0]
+            self.assertEqual(n, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
