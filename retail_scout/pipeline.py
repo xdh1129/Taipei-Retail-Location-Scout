@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import zipfile
 from pathlib import Path
 
 import duckdb
@@ -72,15 +73,39 @@ def stage_entrances(con: duckdb.DuckDBPyConnection, src_table: str = "raw_entran
     )
 
 
+def _resolve_districts_path(path: str | Path) -> str:
+    path = Path(path)
+    suffix = path.suffix.lower()
+
+    if suffix == ".zip":
+        extract_dir = path.parent / path.stem
+        extract_dir.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(path) as zf:
+            zf.extractall(extract_dir)
+
+        shp_files = list(extract_dir.rglob("*.shp"))
+        if not shp_files:
+            raise FileNotFoundError(
+                f"No .shp file found inside extracted districts zip: {path}"
+            )
+        return str(shp_files[0])
+
+    if suffix in (".shp", ".geojson", ".json"):
+        return str(path)
+
+    return str(path)
+
+
 def stage_districts(con: duckdb.DuckDBPyConnection, geojson_path: str,
                     county_field: str = "COUNTYNAME", town_field: str = "TOWNNAME") -> None:
+    source = _resolve_districts_path(geojson_path)
     con.execute(
         f"""
         CREATE OR REPLACE TABLE stg_districts AS
         SELECT
             normalize_taipei_name("{county_field}" || "{town_field}") AS district,
             geom
-        FROM ST_Read('{geojson_path}')
+        FROM ST_Read('{source}')
         WHERE normalize_taipei_name("{county_field}") = '臺北市'
         """
     )
@@ -156,14 +181,19 @@ def stage_population(con: duckdb.DuckDBPyConnection, src_table: str = "raw_popul
 
 def stage_cost(con: duckdb.DuckDBPyConnection, src_table: str = "raw_land_value",
                value_field: str = "land_value", district_field: str = "district") -> None:
+    district_key_expr = (
+        f'CASE WHEN normalize_taipei_name("{district_field}") LIKE \'臺北市%\' '
+        f'THEN normalize_taipei_name("{district_field}") '
+        f'ELSE \'臺北市\' || normalize_taipei_name("{district_field}") END'
+    )
     con.execute(
         f"""
         CREATE OR REPLACE TABLE stg_cost AS
         WITH means AS (
-            SELECT normalize_taipei_name("{district_field}") AS district,
+            SELECT {district_key_expr} AS district,
                    avg(CAST("{value_field}" AS DOUBLE)) AS v
             FROM {src_table}
-            GROUP BY district
+            GROUP BY {district_key_expr}
         ),
         bounds AS (SELECT min(v) AS lo, max(v) AS hi FROM means)
         SELECT

@@ -21,7 +21,6 @@ from retail_scout.dashboard import (
 SCORED_PATH = ROOT / "data" / "processed" / "station_scores.csv"
 SAMPLE_PATH = ROOT / "data" / "sample" / "station_features.csv"
 FEATURE_PATH = ROOT / "data" / "processed" / "station_features.csv"
-METADATA_PATH = ROOT / "data" / "processed" / "station_features_metadata.json"
 
 
 st.set_page_config(page_title="Taipei Retail Location Scout", layout="wide")
@@ -235,6 +234,4 @@ else:
     source_line = "Processed data"
     if FEATURE_PATH.exists():
         source_line += f" from `{FEATURE_PATH.relative_to(ROOT)}`"
-    if METADATA_PATH.exists():
-        source_line += f" with metadata in `{METADATA_PATH.relative_to(ROOT)}`"
     st.caption(source_line)

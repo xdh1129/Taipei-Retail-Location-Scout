@@ -1,8 +1,11 @@
+import tempfile
 import unittest
+import zipfile
+from pathlib import Path
 
 import duckdb
 
-from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances, stage_station_district, stage_competitors, stage_cost, stage_population, build_feature_mart
+from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances, stage_station_district, stage_competitors, stage_cost, stage_population, build_feature_mart, _resolve_districts_path
 
 
 class StationNameTests(unittest.TestCase):
@@ -24,6 +27,33 @@ class StationNameTests(unittest.TestCase):
 
     def test_normalize_taipei_name(self):
         self.assertEqual(normalize_taipei_name("台北市大安區"), "臺北市大安區")
+
+
+class ResolveDistrictsPathTests(unittest.TestCase):
+    def test_extracts_shp_from_zip(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            zip_path = Path(tmpdir) / "taipei_districts.zip"
+            with zipfile.ZipFile(zip_path, "w") as zf:
+                zf.writestr("taipei.shp", b"dummy")
+                zf.writestr("taipei.dbf", b"dummy")
+
+            result = _resolve_districts_path(zip_path)
+
+            self.assertTrue(result.endswith("taipei.shp"))
+            self.assertTrue(Path(result).exists())
+
+    def test_non_zip_path_returned_unchanged(self):
+        path = "/some/dir/taipei_districts.geojson"
+        self.assertEqual(_resolve_districts_path(path), path)
+
+    def test_zip_without_shp_raises_file_not_found(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            zip_path = Path(tmpdir) / "taipei_districts.zip"
+            with zipfile.ZipFile(zip_path, "w") as zf:
+                zf.writestr("taipei.dbf", b"dummy")
+
+            with self.assertRaises(FileNotFoundError):
+                _resolve_districts_path(zip_path)
 
 
 class StageStationsTests(unittest.TestCase):
@@ -53,8 +83,8 @@ class StageStationsTests(unittest.TestCase):
         # 中山R(114) 120+240 + 中山G(114) 60+180 = 600; /12 = 50.0
         self.assertIn(("中山", 50.0), rows)
         # 一日票 normalizes to 一日票 (no line suffix) and is still present at this
-        # stage; it is dropped later by the entrances join.
-        self.assertTrue(any(name == "中山" for name, _ in rows))
+        # stage; it is dropped later by the entrances join. 999+999=1998, /12=166.5
+        self.assertIn(("一日票", 166.5), rows)
 
 
 class StageEntrancesTests(unittest.TestCase):
@@ -200,6 +230,22 @@ class StagePopulationCostTests(unittest.TestCase):
         self.assertAlmostEqual(rows["臺北市大安區"], 100.0)  # max
         self.assertAlmostEqual(rows["臺北市士林區"], 50.0)   # min
         self.assertAlmostEqual(rows["臺北市中正區"], 50.0 + 50.0 * ((100 - 50) / (200 - 50)))
+
+    def test_cost_index_prefixes_bare_district_names(self):
+        con = connect()
+        con.execute("CREATE TABLE raw_land_value (district VARCHAR, land_value DOUBLE)")
+        con.executemany(
+            "INSERT INTO raw_land_value VALUES (?, ?)",
+            [("大安區", 200.0), ("中正區", 100.0)],
+        )
+
+        stage_cost(con)
+        rows = dict(
+            con.execute("SELECT district, real_estate_cost_index FROM stg_cost").fetchall()
+        )
+
+        self.assertIn("臺北市大安區", rows)
+        self.assertIn("臺北市中正區", rows)
 
     def test_cost_index_equal_values_returns_75(self):
         con = connect()

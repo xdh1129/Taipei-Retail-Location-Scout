@@ -29,7 +29,10 @@ def main() -> None:
         PROCESSED_DIR / "station_features.csv",
     )
     kept = con.execute("SELECT count(*) FROM mart_station_features").fetchone()[0]
-    print(f"Wrote {kept} station feature rows; dropped {dropped} out-of-scope stations.")
+    print(
+        f"Wrote {kept} station feature rows; dropped {dropped} stations not resolvable "
+        "to a complete Taipei City district profile."
+    )
 
 
 if __name__ == "__main__":
