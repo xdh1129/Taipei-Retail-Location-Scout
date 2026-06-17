@@ -2,7 +2,7 @@ import unittest
 
 import duckdb
 
-from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances, stage_station_district
+from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances, stage_station_district, stage_competitors
 
 
 class StationNameTests(unittest.TestCase):
@@ -125,6 +125,31 @@ class StationDistrictTests(unittest.TestCase):
         self.assertEqual(rows["StationInA"], "臺北市A區")
         self.assertEqual(rows["Border"], "臺北市A區")
         self.assertNotIn("Outside", rows)
+
+
+class StageCompetitorsTests(unittest.TestCase):
+    def test_counts_active_restaurants_per_district(self):
+        con = connect()
+        con.execute("CREATE TABLE raw_registry (商業地址 VARCHAR, 登記狀態 VARCHAR)")
+        con.executemany(
+            "INSERT INTO raw_registry VALUES (?, ?)",
+            [
+                ("臺北市大安區復興南路一段1號", "核准設立"),
+                ("台北市大安區忠孝東路一段2號", "核准設立"),  # 台 -> 臺
+                ("臺北市大安區仁愛路3號", "歇業／撤銷"),       # inactive
+                ("臺北市中正區羅斯福路三段3號", "核准設立"),
+                ("新北市板橋區中山路1號", "核准設立"),          # not Taipei
+            ],
+        )
+
+        stage_competitors(con)
+        rows = dict(
+            con.execute("SELECT district, competitor_count FROM stg_competitors").fetchall()
+        )
+
+        self.assertEqual(rows["臺北市大安區"], 2)
+        self.assertEqual(rows["臺北市中正區"], 1)
+        self.assertNotIn("新北市板橋區", rows)
 
 
 if __name__ == "__main__":

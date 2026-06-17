@@ -106,3 +106,18 @@ def stage_station_district(con: duckdb.DuckDBPyConnection) -> None:
         SELECT station_name, district FROM ranked WHERE rk = 1
         """
     )
+
+
+def stage_competitors(con: duckdb.DuckDBPyConnection, src_table: str = "raw_registry") -> None:
+    con.execute(
+        f"""
+        CREATE OR REPLACE TABLE stg_competitors AS
+        SELECT
+            regexp_extract(normalize_taipei_name(商業地址), '臺北市..區') AS district,
+            count(*) AS competitor_count
+        FROM {src_table}
+        WHERE NOT regexp_matches(登記狀態, '歇業|撤銷|廢止|停業')
+          AND regexp_extract(normalize_taipei_name(商業地址), '臺北市..區') <> ''
+        GROUP BY district
+        """
+    )
