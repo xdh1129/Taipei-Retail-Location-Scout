@@ -2,7 +2,7 @@ import unittest
 
 import duckdb
 
-from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances
+from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances, stage_station_district
 
 
 class StationNameTests(unittest.TestCase):
@@ -89,6 +89,42 @@ class StageEntrancesTests(unittest.TestCase):
             "SELECT station_name, count(*) FROM stg_entrances GROUP BY station_name"
         ).fetchall()
         self.assertEqual(rows, [("台北車站", 2)])
+
+
+class StationDistrictTests(unittest.TestCase):
+    def _seed(self, con):
+        # Two unit-square districts side by side: A = x in [0,1], B = x in [1,2].
+        con.execute("CREATE TABLE stg_districts (district VARCHAR, geom GEOMETRY)")
+        con.execute(
+            "INSERT INTO stg_districts VALUES "
+            "('臺北市A區', ST_GeomFromText('POLYGON((0 0,1 0,1 1,0 1,0 0))')), "
+            "('臺北市B區', ST_GeomFromText('POLYGON((1 0,2 0,2 1,1 1,1 0))'))"
+        )
+        con.execute("CREATE TABLE stg_entrances (station_name VARCHAR, lon DOUBLE, lat DOUBLE)")
+        con.executemany(
+            "INSERT INTO stg_entrances VALUES (?, ?, ?)",
+            [
+                ("StationInA", 0.5, 0.5),
+                ("StationInA", 0.6, 0.4),   # both in A
+                ("Border", 0.5, 0.5),       # one in A
+                ("Border", 0.5, 0.5),       # one in A -> modal A
+                ("Border", 1.5, 0.5),       # one in B
+                ("Outside", 9.0, 9.0),      # in neither -> dropped
+            ],
+        )
+
+    def test_station_district_uses_modal_and_drops_outside(self):
+        con = connect()
+        self._seed(con)
+
+        stage_station_district(con)
+        rows = dict(
+            con.execute("SELECT station_name, district FROM stg_station_district").fetchall()
+        )
+
+        self.assertEqual(rows["StationInA"], "臺北市A區")
+        self.assertEqual(rows["Border"], "臺北市A區")
+        self.assertNotIn("Outside", rows)
 
 
 if __name__ == "__main__":

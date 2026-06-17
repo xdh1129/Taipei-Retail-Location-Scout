@@ -69,3 +69,40 @@ def stage_entrances(con: duckdb.DuckDBPyConnection, src_table: str = "raw_entran
         WHERE 經度 IS NOT NULL AND 緯度 IS NOT NULL
         """
     )
+
+
+def stage_districts(con: duckdb.DuckDBPyConnection, geojson_path: str,
+                    county_field: str = "COUNTYNAME", town_field: str = "TOWNNAME") -> None:
+    con.execute(
+        f"""
+        CREATE OR REPLACE TABLE stg_districts AS
+        SELECT
+            normalize_taipei_name("{county_field}" || "{town_field}") AS district,
+            geom
+        FROM ST_Read('{geojson_path}')
+        WHERE normalize_taipei_name("{county_field}") = '臺北市'
+        """
+    )
+
+
+def stage_station_district(con: duckdb.DuckDBPyConnection) -> None:
+    con.execute(
+        """
+        CREATE OR REPLACE TABLE stg_station_district AS
+        WITH hits AS (
+            SELECT e.station_name, d.district, count(*) AS n
+            FROM stg_entrances e
+            JOIN stg_districts d
+              ON ST_Within(ST_Point(e.lon, e.lat), d.geom)
+            GROUP BY e.station_name, d.district
+        ),
+        ranked AS (
+            SELECT station_name, district,
+                   row_number() OVER (
+                       PARTITION BY station_name ORDER BY n DESC, district
+                   ) AS rk
+            FROM hits
+        )
+        SELECT station_name, district FROM ranked WHERE rk = 1
+        """
+    )
