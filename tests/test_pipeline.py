@@ -2,7 +2,7 @@ import unittest
 
 import duckdb
 
-from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations
+from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances
 
 
 class StationNameTests(unittest.TestCase):
@@ -55,6 +55,27 @@ class StageStationsTests(unittest.TestCase):
         # 一日票 normalizes to 一日票 (no line suffix) and is still present at this
         # stage; it is dropped later by the entrances join.
         self.assertTrue(any(name == "中山" for name, _ in rows))
+
+
+class StageEntrancesTests(unittest.TestCase):
+    def test_stage_entrances_extracts_station_and_coords(self):
+        con = connect()
+        con.execute("CREATE TABLE raw_entrances (出入口名稱 VARCHAR, 經度 DOUBLE, 緯度 DOUBLE)")
+        con.executemany(
+            "INSERT INTO raw_entrances VALUES (?, ?, ?)",
+            [
+                ("中山站出口1", 121.520, 25.052),
+                ("中山站出口2", 121.521, 25.053),
+                ("公館站出口1", 121.534, 25.014),
+            ],
+        )
+
+        stage_entrances(con)
+        rows = con.execute(
+            "SELECT station_name, count(*) FROM stg_entrances GROUP BY station_name ORDER BY station_name"
+        ).fetchall()
+
+        self.assertEqual(rows, [("中山", 2), ("公館", 1)])
 
 
 if __name__ == "__main__":
