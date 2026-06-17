@@ -172,3 +172,33 @@ def stage_cost(con: duckdb.DuckDBPyConnection, src_table: str = "raw_land_value"
         FROM means m, bounds b
         """
     )
+
+
+def build_feature_mart(con: duckdb.DuckDBPyConnection) -> int:
+    con.execute(
+        """
+        CREATE OR REPLACE TABLE mart_station_features AS
+        WITH entrance_counts AS (
+            SELECT station_name, count(*) AS n FROM stg_entrances GROUP BY station_name
+        ),
+        max_entrances AS (SELECT max(n) AS mx FROM entrance_counts)
+        SELECT
+            s.station_name,
+            round(s.monthly_entries_exits, 2) AS monthly_entries_exits,
+            p.target_population,
+            c.competitor_count,
+            k.real_estate_cost_index,
+            round(ec.n::DOUBLE / m.mx, 2) AS transport_access_index
+        FROM stg_stations s
+        JOIN stg_station_district sd ON s.station_name = sd.station_name
+        JOIN stg_population p ON sd.district = p.district
+        JOIN stg_competitors c ON sd.district = c.district
+        JOIN stg_cost k ON sd.district = k.district
+        JOIN entrance_counts ec ON s.station_name = ec.station_name
+        CROSS JOIN max_entrances m
+        ORDER BY s.station_name
+        """
+    )
+    total = con.execute("SELECT count(*) FROM stg_stations").fetchone()[0]
+    kept = con.execute("SELECT count(*) FROM mart_station_features").fetchone()[0]
+    return total - kept

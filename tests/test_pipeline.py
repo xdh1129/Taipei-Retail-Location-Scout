@@ -2,7 +2,7 @@ import unittest
 
 import duckdb
 
-from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances, stage_station_district, stage_competitors, stage_cost, stage_population
+from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations, stage_entrances, stage_station_district, stage_competitors, stage_cost, stage_population, build_feature_mart
 
 
 class StationNameTests(unittest.TestCase):
@@ -210,6 +210,45 @@ class StagePopulationCostTests(unittest.TestCase):
         rows = dict(con.execute("SELECT district, real_estate_cost_index FROM stg_cost").fetchall())
         self.assertAlmostEqual(rows["臺北市大安區"], 75.0)
         self.assertAlmostEqual(rows["臺北市中正區"], 75.0)
+
+
+class FeatureMartTests(unittest.TestCase):
+    def test_mart_joins_and_drops_unresolved(self):
+        con = connect()
+        con.execute("CREATE TABLE stg_stations (station_name VARCHAR, monthly_entries_exits DOUBLE)")
+        con.executemany("INSERT INTO stg_stations VALUES (?, ?)",
+                        [("A", 100.0), ("B", 50.0), ("Ghost", 10.0)])
+        con.execute("CREATE TABLE stg_entrances (station_name VARCHAR, lon DOUBLE, lat DOUBLE)")
+        con.executemany("INSERT INTO stg_entrances VALUES (?, ?, ?)",
+                        [("A", 0, 0), ("A", 0, 0), ("B", 0, 0)])  # A:2 entrances, B:1
+        con.execute("CREATE TABLE stg_station_district (station_name VARCHAR, district VARCHAR)")
+        con.executemany("INSERT INTO stg_station_district VALUES (?, ?)",
+                        [("A", "臺北市大安區"), ("B", "臺北市中正區")])  # Ghost unresolved
+        con.execute("CREATE TABLE stg_competitors (district VARCHAR, competitor_count BIGINT)")
+        con.executemany("INSERT INTO stg_competitors VALUES (?, ?)",
+                        [("臺北市大安區", 300), ("臺北市中正區", 100)])
+        con.execute("CREATE TABLE stg_population (district VARCHAR, target_population BIGINT)")
+        con.executemany("INSERT INTO stg_population VALUES (?, ?)",
+                        [("臺北市大安區", 40000), ("臺北市中正區", 30000)])
+        con.execute("CREATE TABLE stg_cost (district VARCHAR, real_estate_cost_index DOUBLE)")
+        con.executemany("INSERT INTO stg_cost VALUES (?, ?)",
+                        [("臺北市大安區", 100.0), ("臺北市中正區", 60.0)])
+
+        dropped = build_feature_mart(con)
+        rows = con.execute(
+            "SELECT station_name, monthly_entries_exits, target_population, competitor_count, "
+            "real_estate_cost_index, transport_access_index FROM mart_station_features "
+            "ORDER BY station_name"
+        ).fetchall()
+
+        self.assertEqual(dropped, 1)  # Ghost dropped
+        self.assertEqual(
+            rows,
+            [
+                ("A", 100.0, 40000, 300, 100.0, 1.0),   # 2 entrances -> max -> 1.0
+                ("B", 50.0, 30000, 100, 60.0, 0.5),     # 1 entrance -> 0.5
+            ],
+        )
 
 
 if __name__ == "__main__":
