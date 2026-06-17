@@ -1,6 +1,8 @@
 import unittest
 
-from retail_scout.pipeline import normalize_station_name, normalize_taipei_name
+import duckdb
+
+from retail_scout.pipeline import connect, normalize_station_name, normalize_taipei_name, stage_stations
 
 
 class StationNameTests(unittest.TestCase):
@@ -22,6 +24,37 @@ class StationNameTests(unittest.TestCase):
 
     def test_normalize_taipei_name(self):
         self.assertEqual(normalize_taipei_name("台北市大安區"), "臺北市大安區")
+
+
+class StageStationsTests(unittest.TestCase):
+    def _seed_raw_mrt(self, con):
+        con.execute(
+            "CREATE TABLE raw_mrt (統計期 VARCHAR, 捷運站別 VARCHAR, 進站人次 BIGINT, 出站人次 BIGINT)"
+        )
+        con.executemany(
+            "INSERT INTO raw_mrt VALUES (?, ?, ?, ?)",
+            [
+                ("113年", "中山R", 10, 20),
+                ("114年", "中山R", 120, 240),
+                ("114年", "中山G", 60, 180),
+                ("114年", "一日票", 999, 999),
+            ],
+        )
+
+    def test_stage_stations_merges_lines_and_keeps_latest_year(self):
+        con = connect()
+        self._seed_raw_mrt(con)
+
+        stage_stations(con)
+        rows = con.execute(
+            "SELECT station_name, monthly_entries_exits FROM stg_stations ORDER BY station_name"
+        ).fetchall()
+
+        # 中山R(114) 120+240 + 中山G(114) 60+180 = 600; /12 = 50.0
+        self.assertIn(("中山", 50.0), rows)
+        # 一日票 normalizes to 一日票 (no line suffix) and is still present at this
+        # stage; it is dropped later by the entrances join.
+        self.assertTrue(any(name == "中山" for name, _ in rows))
 
 
 if __name__ == "__main__":
