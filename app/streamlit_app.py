@@ -235,3 +235,9 @@ else:
     if FEATURE_PATH.exists():
         source_line += f" from `{FEATURE_PATH.relative_to(ROOT)}`"
     st.caption(source_line)
+    st.caption(
+        "All Taipei City MRT stations resolved by a DuckDB spatial point-in-district join. "
+        "Foot traffic, population, and competition are live open data; the real-estate cost "
+        "index uses a transparent stand-in table (see repo docs). The opportunity index caps "
+        "at 100, so sort by feasibility ratio to separate the top trade areas."
+    )
