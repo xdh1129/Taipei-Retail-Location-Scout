@@ -77,6 +77,19 @@ class StageEntrancesTests(unittest.TestCase):
 
         self.assertEqual(rows, [("中山", 2), ("公館", 1)])
 
+    def test_stage_entrances_handles_taipei_main_m_suffix(self):
+        con = connect()
+        con.execute("CREATE TABLE raw_entrances (出入口名稱 VARCHAR, 經度 DOUBLE, 緯度 DOUBLE)")
+        con.executemany(
+            "INSERT INTO raw_entrances VALUES (?, ?, ?)",
+            [("台北車站M1", 121.517, 25.046), ("台北車站M8", 121.517, 25.047)],
+        )
+        stage_entrances(con)
+        rows = con.execute(
+            "SELECT station_name, count(*) FROM stg_entrances GROUP BY station_name"
+        ).fetchall()
+        self.assertEqual(rows, [("台北車站", 2)])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -61,7 +61,7 @@ def stage_entrances(con: duckdb.DuckDBPyConnection, src_table: str = "raw_entran
         CREATE OR REPLACE TABLE stg_entrances AS
         SELECT
             normalize_station_name(
-                regexp_replace(出入口名稱, '站?(出入口|出口).*$', '')
+                regexp_replace(出入口名稱, '(站?(出入口|出口)|M[0-9]).*$', '')
             ) AS station_name,
             CAST(經度 AS DOUBLE) AS lon,
             CAST(緯度 AS DOUBLE) AS lat
